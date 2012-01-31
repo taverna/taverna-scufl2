@@ -1,0 +1,110 @@
+<HTML>
+<BODY BGCOLOR="white">
+<PRE>
+<FONT color="green">001</FONT>    /*******************************************************************************<a name="line.1"></a>
+<FONT color="green">002</FONT>     * Copyright (C) 2010 The University of Manchester<a name="line.2"></a>
+<FONT color="green">003</FONT>     * <a name="line.3"></a>
+<FONT color="green">004</FONT>     *  Modifications to the initial code base are copyright of their<a name="line.4"></a>
+<FONT color="green">005</FONT>     *  respective authors, or their employers as appropriate.<a name="line.5"></a>
+<FONT color="green">006</FONT>     * <a name="line.6"></a>
+<FONT color="green">007</FONT>     *  This program is free software; you can redistribute it and/or<a name="line.7"></a>
+<FONT color="green">008</FONT>     *  modify it under the terms of the GNU Lesser General Public License<a name="line.8"></a>
+<FONT color="green">009</FONT>     *  as published by the Free Software Foundation; either version 2.1 of<a name="line.9"></a>
+<FONT color="green">010</FONT>     *  the License, or (at your option) any later version.<a name="line.10"></a>
+<FONT color="green">011</FONT>     * <a name="line.11"></a>
+<FONT color="green">012</FONT>     *  This program is distributed in the hope that it will be useful, but<a name="line.12"></a>
+<FONT color="green">013</FONT>     *  WITHOUT ANY WARRANTY; without even the implied warranty of<a name="line.13"></a>
+<FONT color="green">014</FONT>     *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU<a name="line.14"></a>
+<FONT color="green">015</FONT>     *  Lesser General Public License for more details.<a name="line.15"></a>
+<FONT color="green">016</FONT>     * <a name="line.16"></a>
+<FONT color="green">017</FONT>     *  You should have received a copy of the GNU Lesser General Public<a name="line.17"></a>
+<FONT color="green">018</FONT>     *  License along with this program; if not, write to the Free Software<a name="line.18"></a>
+<FONT color="green">019</FONT>     *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307<a name="line.19"></a>
+<FONT color="green">020</FONT>     ******************************************************************************/<a name="line.20"></a>
+<FONT color="green">021</FONT>    package uk.org.taverna.scufl2.api.property;<a name="line.21"></a>
+<FONT color="green">022</FONT>    <a name="line.22"></a>
+<FONT color="green">023</FONT>    import java.net.URI;<a name="line.23"></a>
+<FONT color="green">024</FONT>    <a name="line.24"></a>
+<FONT color="green">025</FONT>    /**<a name="line.25"></a>
+<FONT color="green">026</FONT>     * Thrown when more than one {@link PropertyObject} was found, buy only one property was expected.<a name="line.26"></a>
+<FONT color="green">027</FONT>     * <a name="line.27"></a>
+<FONT color="green">028</FONT>     * @see PropertyResource#getProperty(java.net.URI)<a name="line.28"></a>
+<FONT color="green">029</FONT>     * @see PropertyResource#getPropertyAsString(java.net.URI)<a name="line.29"></a>
+<FONT color="green">030</FONT>     * @see PropertyResource#getPropertyAsResourceURI(java.net.URI)<a name="line.30"></a>
+<FONT color="green">031</FONT>     * <a name="line.31"></a>
+<FONT color="green">032</FONT>     * @author Stian Soiland-Reyes<a name="line.32"></a>
+<FONT color="green">033</FONT>     */<a name="line.33"></a>
+<FONT color="green">034</FONT>    public class MultiplePropertiesException extends PropertyException {<a name="line.34"></a>
+<FONT color="green">035</FONT>    <a name="line.35"></a>
+<FONT color="green">036</FONT>            private static final long serialVersionUID = 2801964990757296381L;<a name="line.36"></a>
+<FONT color="green">037</FONT>    <a name="line.37"></a>
+<FONT color="green">038</FONT>            public MultiplePropertiesException(URI predicate,<a name="line.38"></a>
+<FONT color="green">039</FONT>                            PropertyResource propertyResource) {<a name="line.39"></a>
+<FONT color="green">040</FONT>                    super("More than one property " + predicate + " found in "<a name="line.40"></a>
+<FONT color="green">041</FONT>                                    + propertyResource, predicate, propertyResource);<a name="line.41"></a>
+<FONT color="green">042</FONT>            }<a name="line.42"></a>
+<FONT color="green">043</FONT>    <a name="line.43"></a>
+<FONT color="green">044</FONT>    }<a name="line.44"></a>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</PRE>
+</BODY>
+</HTML>

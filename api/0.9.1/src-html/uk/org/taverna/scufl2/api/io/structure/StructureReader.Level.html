@@ -1,0 +1,475 @@
+<HTML>
+<BODY BGCOLOR="white">
+<PRE>
+<FONT color="green">001</FONT>    package uk.org.taverna.scufl2.api.io.structure;<a name="line.1"></a>
+<FONT color="green">002</FONT>    <a name="line.2"></a>
+<FONT color="green">003</FONT>    import java.io.BufferedInputStream;<a name="line.3"></a>
+<FONT color="green">004</FONT>    import java.io.File;<a name="line.4"></a>
+<FONT color="green">005</FONT>    import java.io.FileInputStream;<a name="line.5"></a>
+<FONT color="green">006</FONT>    import java.io.IOException;<a name="line.6"></a>
+<FONT color="green">007</FONT>    import java.io.InputStream;<a name="line.7"></a>
+<FONT color="green">008</FONT>    import java.net.URI;<a name="line.8"></a>
+<FONT color="green">009</FONT>    import java.nio.charset.Charset;<a name="line.9"></a>
+<FONT color="green">010</FONT>    import java.util.Collections;<a name="line.10"></a>
+<FONT color="green">011</FONT>    import java.util.Scanner;<a name="line.11"></a>
+<FONT color="green">012</FONT>    import java.util.Set;<a name="line.12"></a>
+<FONT color="green">013</FONT>    import java.util.regex.Matcher;<a name="line.13"></a>
+<FONT color="green">014</FONT>    import java.util.regex.Pattern;<a name="line.14"></a>
+<FONT color="green">015</FONT>    <a name="line.15"></a>
+<FONT color="green">016</FONT>    import uk.org.taverna.scufl2.api.activity.Activity;<a name="line.16"></a>
+<FONT color="green">017</FONT>    import uk.org.taverna.scufl2.api.configurations.Configuration;<a name="line.17"></a>
+<FONT color="green">018</FONT>    import uk.org.taverna.scufl2.api.container.WorkflowBundle;<a name="line.18"></a>
+<FONT color="green">019</FONT>    import uk.org.taverna.scufl2.api.core.BlockingControlLink;<a name="line.19"></a>
+<FONT color="green">020</FONT>    import uk.org.taverna.scufl2.api.core.DataLink;<a name="line.20"></a>
+<FONT color="green">021</FONT>    import uk.org.taverna.scufl2.api.core.Processor;<a name="line.21"></a>
+<FONT color="green">022</FONT>    import uk.org.taverna.scufl2.api.core.Workflow;<a name="line.22"></a>
+<FONT color="green">023</FONT>    import uk.org.taverna.scufl2.api.io.ReaderException;<a name="line.23"></a>
+<FONT color="green">024</FONT>    import uk.org.taverna.scufl2.api.io.WorkflowBundleReader;<a name="line.24"></a>
+<FONT color="green">025</FONT>    import uk.org.taverna.scufl2.api.port.InputActivityPort;<a name="line.25"></a>
+<FONT color="green">026</FONT>    import uk.org.taverna.scufl2.api.port.InputProcessorPort;<a name="line.26"></a>
+<FONT color="green">027</FONT>    import uk.org.taverna.scufl2.api.port.InputWorkflowPort;<a name="line.27"></a>
+<FONT color="green">028</FONT>    import uk.org.taverna.scufl2.api.port.OutputActivityPort;<a name="line.28"></a>
+<FONT color="green">029</FONT>    import uk.org.taverna.scufl2.api.port.OutputProcessorPort;<a name="line.29"></a>
+<FONT color="green">030</FONT>    import uk.org.taverna.scufl2.api.port.OutputWorkflowPort;<a name="line.30"></a>
+<FONT color="green">031</FONT>    import uk.org.taverna.scufl2.api.port.ReceiverPort;<a name="line.31"></a>
+<FONT color="green">032</FONT>    import uk.org.taverna.scufl2.api.port.SenderPort;<a name="line.32"></a>
+<FONT color="green">033</FONT>    import uk.org.taverna.scufl2.api.profiles.ProcessorBinding;<a name="line.33"></a>
+<FONT color="green">034</FONT>    import uk.org.taverna.scufl2.api.profiles.ProcessorInputPortBinding;<a name="line.34"></a>
+<FONT color="green">035</FONT>    import uk.org.taverna.scufl2.api.profiles.ProcessorOutputPortBinding;<a name="line.35"></a>
+<FONT color="green">036</FONT>    import uk.org.taverna.scufl2.api.profiles.Profile;<a name="line.36"></a>
+<FONT color="green">037</FONT>    <a name="line.37"></a>
+<FONT color="green">038</FONT>    /**<a name="line.38"></a>
+<FONT color="green">039</FONT>     * A &lt;code&gt;WorkflowBundleReader&lt;/code&gt; that reads a {@link WorkflowBundle} in Scufl2 Structure<a name="line.39"></a>
+<FONT color="green">040</FONT>     * format.<a name="line.40"></a>
+<FONT color="green">041</FONT>     */<a name="line.41"></a>
+<FONT color="green">042</FONT>    public class StructureReader implements WorkflowBundleReader {<a name="line.42"></a>
+<FONT color="green">043</FONT>    <a name="line.43"></a>
+<FONT color="green">044</FONT>            public enum Level {<a name="line.44"></a>
+<FONT color="green">045</FONT>                    WorkflowBundle, Workflow, Processor, Activity, Links, Profile, Configuration, ProcessorBinding, OutputPortBindings, InputPortBindings, Property, Controls<a name="line.45"></a>
+<FONT color="green">046</FONT>    <a name="line.46"></a>
+<FONT color="green">047</FONT>            }<a name="line.47"></a>
+<FONT color="green">048</FONT>    <a name="line.48"></a>
+<FONT color="green">049</FONT>            private static final String ACTIVITY_SLASH = "activity/";<a name="line.49"></a>
+<FONT color="green">050</FONT>    <a name="line.50"></a>
+<FONT color="green">051</FONT>            public static final String TEXT_VND_TAVERNA_SCUFL2_STRUCTURE = "text/vnd.taverna.scufl2.structure";<a name="line.51"></a>
+<FONT color="green">052</FONT>    <a name="line.52"></a>
+<FONT color="green">053</FONT>            private WorkflowBundle wb;<a name="line.53"></a>
+<FONT color="green">054</FONT>    <a name="line.54"></a>
+<FONT color="green">055</FONT>            private Level level;<a name="line.55"></a>
+<FONT color="green">056</FONT>    <a name="line.56"></a>
+<FONT color="green">057</FONT>            private String mainWorkflow;<a name="line.57"></a>
+<FONT color="green">058</FONT>    <a name="line.58"></a>
+<FONT color="green">059</FONT>            private Workflow workflow;<a name="line.59"></a>
+<FONT color="green">060</FONT>    <a name="line.60"></a>
+<FONT color="green">061</FONT>            private Processor processor;<a name="line.61"></a>
+<FONT color="green">062</FONT>    <a name="line.62"></a>
+<FONT color="green">063</FONT>            private Activity activity;<a name="line.63"></a>
+<FONT color="green">064</FONT>    <a name="line.64"></a>
+<FONT color="green">065</FONT>            Pattern linkPattern = Pattern<a name="line.65"></a>
+<FONT color="green">066</FONT>            .compile("'(.*[^\\\\])'\\s-&gt;\\s'(.*[^\\\\\\\\])'");<a name="line.66"></a>
+<FONT color="green">067</FONT>    <a name="line.67"></a>
+<FONT color="green">068</FONT>            Pattern blockPattern = Pattern<a name="line.68"></a>
+<FONT color="green">069</FONT>            .compile("\\s*block\\s+'(.*[^\\\\])'\\s+until\\s+'(.*[^\\\\\\\\])'\\s+finish");<a name="line.69"></a>
+<FONT color="green">070</FONT>    <a name="line.70"></a>
+<FONT color="green">071</FONT>            private String mainProfile;<a name="line.71"></a>
+<FONT color="green">072</FONT>    <a name="line.72"></a>
+<FONT color="green">073</FONT>            private Profile profile;<a name="line.73"></a>
+<FONT color="green">074</FONT>    <a name="line.74"></a>
+<FONT color="green">075</FONT>            private Configuration configuration;<a name="line.75"></a>
+<FONT color="green">076</FONT>    <a name="line.76"></a>
+<FONT color="green">077</FONT>            private ProcessorBinding processorBinding;<a name="line.77"></a>
+<FONT color="green">078</FONT>    <a name="line.78"></a>
+<FONT color="green">079</FONT>            private URI propertyUri;<a name="line.79"></a>
+<FONT color="green">080</FONT>    <a name="line.80"></a>
+<FONT color="green">081</FONT>            private StringBuffer propertyString;<a name="line.81"></a>
+<FONT color="green">082</FONT>    <a name="line.82"></a>
+<FONT color="green">083</FONT>            private StringBuffer largeString;<a name="line.83"></a>
+<FONT color="green">084</FONT>    <a name="line.84"></a>
+<FONT color="green">085</FONT>            @Override<a name="line.85"></a>
+<FONT color="green">086</FONT>            public Set&lt;String&gt; getMediaTypes() {<a name="line.86"></a>
+<FONT color="green">087</FONT>                    return Collections.singleton(TEXT_VND_TAVERNA_SCUFL2_STRUCTURE);<a name="line.87"></a>
+<FONT color="green">088</FONT>            }<a name="line.88"></a>
+<FONT color="green">089</FONT>    <a name="line.89"></a>
+<FONT color="green">090</FONT>            protected WorkflowBundle parse(InputStream is) throws ReaderException {<a name="line.90"></a>
+<FONT color="green">091</FONT>    <a name="line.91"></a>
+<FONT color="green">092</FONT>                    wb = new WorkflowBundle();<a name="line.92"></a>
+<FONT color="green">093</FONT>                    Scanner scanner = new Scanner(is);<a name="line.93"></a>
+<FONT color="green">094</FONT>                    try {<a name="line.94"></a>
+<FONT color="green">095</FONT>                            while (scanner.hasNextLine()) {<a name="line.95"></a>
+<FONT color="green">096</FONT>                                    parseLine(scanner.nextLine());<a name="line.96"></a>
+<FONT color="green">097</FONT>                            }<a name="line.97"></a>
+<FONT color="green">098</FONT>                    } finally {<a name="line.98"></a>
+<FONT color="green">099</FONT>                            scanner.close();<a name="line.99"></a>
+<FONT color="green">100</FONT>                    }<a name="line.100"></a>
+<FONT color="green">101</FONT>    <a name="line.101"></a>
+<FONT color="green">102</FONT>                    return wb;<a name="line.102"></a>
+<FONT color="green">103</FONT>            }<a name="line.103"></a>
+<FONT color="green">104</FONT>    <a name="line.104"></a>
+<FONT color="green">105</FONT>            protected void parseLine(String nextLine) throws ReaderException {<a name="line.105"></a>
+<FONT color="green">106</FONT>                    Scanner scanner = new Scanner(nextLine.trim());<a name="line.106"></a>
+<FONT color="green">107</FONT>                    // allow any whitespace<a name="line.107"></a>
+<FONT color="green">108</FONT>                    String next = scanner.next();<a name="line.108"></a>
+<FONT color="green">109</FONT>    <a name="line.109"></a>
+<FONT color="green">110</FONT>                    if (next.isEmpty()) {<a name="line.110"></a>
+<FONT color="green">111</FONT>                            return;<a name="line.111"></a>
+<FONT color="green">112</FONT>                    }<a name="line.112"></a>
+<FONT color="green">113</FONT>                    if (next.equals("WorkflowBundle")) {<a name="line.113"></a>
+<FONT color="green">114</FONT>                            level = Level.WorkflowBundle;<a name="line.114"></a>
+<FONT color="green">115</FONT>                            String name = parseName(scanner);<a name="line.115"></a>
+<FONT color="green">116</FONT>                            wb.setName(name);<a name="line.116"></a>
+<FONT color="green">117</FONT>                            return;<a name="line.117"></a>
+<FONT color="green">118</FONT>                    }<a name="line.118"></a>
+<FONT color="green">119</FONT>                    if (next.equals("MainWorkflow")) {<a name="line.119"></a>
+<FONT color="green">120</FONT>                            mainWorkflow = parseName(scanner);<a name="line.120"></a>
+<FONT color="green">121</FONT>                            return;<a name="line.121"></a>
+<FONT color="green">122</FONT>                    }<a name="line.122"></a>
+<FONT color="green">123</FONT>                    if (next.equals("Workflow")) {<a name="line.123"></a>
+<FONT color="green">124</FONT>                            level = Level.Workflow;<a name="line.124"></a>
+<FONT color="green">125</FONT>                            workflow = new Workflow();<a name="line.125"></a>
+<FONT color="green">126</FONT>                            String workflowName = parseName(scanner);<a name="line.126"></a>
+<FONT color="green">127</FONT>                            workflow.setName(workflowName);<a name="line.127"></a>
+<FONT color="green">128</FONT>                            wb.getWorkflows().add(workflow);<a name="line.128"></a>
+<FONT color="green">129</FONT>                            if (workflowName.equals(mainWorkflow)) {<a name="line.129"></a>
+<FONT color="green">130</FONT>                                    wb.setMainWorkflow(workflow);<a name="line.130"></a>
+<FONT color="green">131</FONT>                            }<a name="line.131"></a>
+<FONT color="green">132</FONT>                            return;<a name="line.132"></a>
+<FONT color="green">133</FONT>                    }<a name="line.133"></a>
+<FONT color="green">134</FONT>                    if (next.equals("In") || next.equals("Out")) {<a name="line.134"></a>
+<FONT color="green">135</FONT>                            boolean in = next.equals("In");<a name="line.135"></a>
+<FONT color="green">136</FONT>                            String portName = parseName(scanner);<a name="line.136"></a>
+<FONT color="green">137</FONT>                            switch (level) {<a name="line.137"></a>
+<FONT color="green">138</FONT>                                    case Workflow:<a name="line.138"></a>
+<FONT color="green">139</FONT>                                            if (in) {<a name="line.139"></a>
+<FONT color="green">140</FONT>                                                    new InputWorkflowPort(workflow, portName);<a name="line.140"></a>
+<FONT color="green">141</FONT>                                            } else {<a name="line.141"></a>
+<FONT color="green">142</FONT>                                                    new OutputWorkflowPort(workflow, portName);<a name="line.142"></a>
+<FONT color="green">143</FONT>                                            }<a name="line.143"></a>
+<FONT color="green">144</FONT>                                            break;<a name="line.144"></a>
+<FONT color="green">145</FONT>                                    case Processor:<a name="line.145"></a>
+<FONT color="green">146</FONT>                                            if (in) {<a name="line.146"></a>
+<FONT color="green">147</FONT>                                                    new InputProcessorPort(processor, portName);<a name="line.147"></a>
+<FONT color="green">148</FONT>                                            } else {<a name="line.148"></a>
+<FONT color="green">149</FONT>                                                    new OutputProcessorPort(processor, portName);<a name="line.149"></a>
+<FONT color="green">150</FONT>                                            }<a name="line.150"></a>
+<FONT color="green">151</FONT>                                            break;<a name="line.151"></a>
+<FONT color="green">152</FONT>                                    case Activity:<a name="line.152"></a>
+<FONT color="green">153</FONT>                                            if (in) {<a name="line.153"></a>
+<FONT color="green">154</FONT>                                                    new InputActivityPort(activity, portName);<a name="line.154"></a>
+<FONT color="green">155</FONT>                                            } else {<a name="line.155"></a>
+<FONT color="green">156</FONT>                                                    new OutputActivityPort(activity, portName);<a name="line.156"></a>
+<FONT color="green">157</FONT>                                            }<a name="line.157"></a>
+<FONT color="green">158</FONT>                                            break;<a name="line.158"></a>
+<FONT color="green">159</FONT>                                    default:<a name="line.159"></a>
+<FONT color="green">160</FONT>                                            throw new ReaderException("Unexpected " + next + " at level "<a name="line.160"></a>
+<FONT color="green">161</FONT>                                                            + level);<a name="line.161"></a>
+<FONT color="green">162</FONT>                            }<a name="line.162"></a>
+<FONT color="green">163</FONT>                            return;<a name="line.163"></a>
+<FONT color="green">164</FONT>                    }<a name="line.164"></a>
+<FONT color="green">165</FONT>                    if (next.equals("Processor")<a name="line.165"></a>
+<FONT color="green">166</FONT>                                    &amp;&amp; (level == Level.Workflow || level == Level.Processor)) {<a name="line.166"></a>
+<FONT color="green">167</FONT>                            level = Level.Processor;<a name="line.167"></a>
+<FONT color="green">168</FONT>                            processor = new Processor();<a name="line.168"></a>
+<FONT color="green">169</FONT>                            String processorName = parseName(scanner);<a name="line.169"></a>
+<FONT color="green">170</FONT>                            processor.setName(processorName);<a name="line.170"></a>
+<FONT color="green">171</FONT>                            processor.setParent(workflow);<a name="line.171"></a>
+<FONT color="green">172</FONT>                            workflow.getProcessors().add(processor);<a name="line.172"></a>
+<FONT color="green">173</FONT>                            return;<a name="line.173"></a>
+<FONT color="green">174</FONT>                    }<a name="line.174"></a>
+<FONT color="green">175</FONT>                    if (next.equals("Links")) {<a name="line.175"></a>
+<FONT color="green">176</FONT>                            level = Level.Links;<a name="line.176"></a>
+<FONT color="green">177</FONT>                            processor = null;<a name="line.177"></a>
+<FONT color="green">178</FONT>                            return;<a name="line.178"></a>
+<FONT color="green">179</FONT>                    }<a name="line.179"></a>
+<FONT color="green">180</FONT>                    if (next.equals("Controls")) {<a name="line.180"></a>
+<FONT color="green">181</FONT>                            level = Level.Controls;<a name="line.181"></a>
+<FONT color="green">182</FONT>                            return;<a name="line.182"></a>
+<FONT color="green">183</FONT>                    }<a name="line.183"></a>
+<FONT color="green">184</FONT>                    if (next.equals("block")) {<a name="line.184"></a>
+<FONT color="green">185</FONT>                            Matcher blockMatcher = blockPattern.matcher(nextLine);<a name="line.185"></a>
+<FONT color="green">186</FONT>                            blockMatcher.find();<a name="line.186"></a>
+<FONT color="green">187</FONT>                            String block = blockMatcher.group(1);<a name="line.187"></a>
+<FONT color="green">188</FONT>                            String untilFinish = blockMatcher.group(2);<a name="line.188"></a>
+<FONT color="green">189</FONT>    <a name="line.189"></a>
+<FONT color="green">190</FONT>                            Processor blockProc = workflow.getProcessors().getByName(block);<a name="line.190"></a>
+<FONT color="green">191</FONT>                            Processor untilFinishedProc = workflow.getProcessors().getByName(<a name="line.191"></a>
+<FONT color="green">192</FONT>                                            untilFinish);<a name="line.192"></a>
+<FONT color="green">193</FONT>                            new BlockingControlLink(blockProc, untilFinishedProc);<a name="line.193"></a>
+<FONT color="green">194</FONT>                    }<a name="line.194"></a>
+<FONT color="green">195</FONT>                    if (next.startsWith("'") &amp;&amp; level.equals(Level.Links)) {<a name="line.195"></a>
+<FONT color="green">196</FONT>                            Matcher linkMatcher = linkPattern.matcher(nextLine);<a name="line.196"></a>
+<FONT color="green">197</FONT>                            linkMatcher.find();<a name="line.197"></a>
+<FONT color="green">198</FONT>                            String firstLink = linkMatcher.group(1);<a name="line.198"></a>
+<FONT color="green">199</FONT>                            String secondLink = linkMatcher.group(2);<a name="line.199"></a>
+<FONT color="green">200</FONT>    <a name="line.200"></a>
+<FONT color="green">201</FONT>                            SenderPort senderPort;<a name="line.201"></a>
+<FONT color="green">202</FONT>                            if (firstLink.contains(":")) {<a name="line.202"></a>
+<FONT color="green">203</FONT>                                    String[] procPort = firstLink.split(":");<a name="line.203"></a>
+<FONT color="green">204</FONT>                                    Processor proc = workflow.getProcessors()<a name="line.204"></a>
+<FONT color="green">205</FONT>                                    .getByName(procPort[0]);<a name="line.205"></a>
+<FONT color="green">206</FONT>                                    senderPort = proc.getOutputPorts().getByName(procPort[1]);<a name="line.206"></a>
+<FONT color="green">207</FONT>                            } else {<a name="line.207"></a>
+<FONT color="green">208</FONT>                                    senderPort = workflow.getInputPorts().getByName(firstLink);<a name="line.208"></a>
+<FONT color="green">209</FONT>                            }<a name="line.209"></a>
+<FONT color="green">210</FONT>    <a name="line.210"></a>
+<FONT color="green">211</FONT>                            ReceiverPort receiverPort;<a name="line.211"></a>
+<FONT color="green">212</FONT>                            if (secondLink.contains(":")) {<a name="line.212"></a>
+<FONT color="green">213</FONT>                                    String[] procPort = secondLink.split(":");<a name="line.213"></a>
+<FONT color="green">214</FONT>                                    Processor proc = workflow.getProcessors()<a name="line.214"></a>
+<FONT color="green">215</FONT>                                    .getByName(procPort[0]);<a name="line.215"></a>
+<FONT color="green">216</FONT>                                    receiverPort = proc.getInputPorts().getByName(procPort[1]);<a name="line.216"></a>
+<FONT color="green">217</FONT>                            } else {<a name="line.217"></a>
+<FONT color="green">218</FONT>                                    receiverPort = workflow.getOutputPorts().getByName(secondLink);<a name="line.218"></a>
+<FONT color="green">219</FONT>                            }<a name="line.219"></a>
+<FONT color="green">220</FONT>    <a name="line.220"></a>
+<FONT color="green">221</FONT>                            new DataLink(workflow, senderPort, receiverPort);<a name="line.221"></a>
+<FONT color="green">222</FONT>                            return;<a name="line.222"></a>
+<FONT color="green">223</FONT>                    }<a name="line.223"></a>
+<FONT color="green">224</FONT>    <a name="line.224"></a>
+<FONT color="green">225</FONT>                    if (next.equals("MainProfile")) {<a name="line.225"></a>
+<FONT color="green">226</FONT>                            mainProfile = parseName(scanner);<a name="line.226"></a>
+<FONT color="green">227</FONT>                            return;<a name="line.227"></a>
+<FONT color="green">228</FONT>                    }<a name="line.228"></a>
+<FONT color="green">229</FONT>                    if (next.equals("Profile")) {<a name="line.229"></a>
+<FONT color="green">230</FONT>                            level = Level.Profile;<a name="line.230"></a>
+<FONT color="green">231</FONT>                            profile = new Profile();<a name="line.231"></a>
+<FONT color="green">232</FONT>                            String profileName = parseName(scanner);<a name="line.232"></a>
+<FONT color="green">233</FONT>                            profile.setName(profileName);<a name="line.233"></a>
+<FONT color="green">234</FONT>                            wb.getProfiles().add(profile);<a name="line.234"></a>
+<FONT color="green">235</FONT>                            if (profileName.equals(mainProfile)) {<a name="line.235"></a>
+<FONT color="green">236</FONT>                                    wb.setMainProfile(profile);<a name="line.236"></a>
+<FONT color="green">237</FONT>                            }<a name="line.237"></a>
+<FONT color="green">238</FONT>                            return;<a name="line.238"></a>
+<FONT color="green">239</FONT>                    }<a name="line.239"></a>
+<FONT color="green">240</FONT>                    if (next.equals("Activity")<a name="line.240"></a>
+<FONT color="green">241</FONT>                                    &amp;&amp; (level == Level.Profile || level == Level.Activity)) {<a name="line.241"></a>
+<FONT color="green">242</FONT>                            level = Level.Activity;<a name="line.242"></a>
+<FONT color="green">243</FONT>                            activity = new Activity();<a name="line.243"></a>
+<FONT color="green">244</FONT>                            String activityName = parseName(scanner);<a name="line.244"></a>
+<FONT color="green">245</FONT>                            activity.setName(activityName);<a name="line.245"></a>
+<FONT color="green">246</FONT>                            profile.getActivities().add(activity);<a name="line.246"></a>
+<FONT color="green">247</FONT>                            return;<a name="line.247"></a>
+<FONT color="green">248</FONT>                    }<a name="line.248"></a>
+<FONT color="green">249</FONT>                    if (next.equals("Type")) {<a name="line.249"></a>
+<FONT color="green">250</FONT>                            URI uri = URI.create(nextLine.split("[&lt;&gt;]")[1]);<a name="line.250"></a>
+<FONT color="green">251</FONT>                            if (level == Level.Activity) {<a name="line.251"></a>
+<FONT color="green">252</FONT>                                    activity.setConfigurableType(uri);<a name="line.252"></a>
+<FONT color="green">253</FONT>                            } else if (level == Level.Configuration) {<a name="line.253"></a>
+<FONT color="green">254</FONT>                                    configuration.getPropertyResource().setTypeURI(uri);<a name="line.254"></a>
+<FONT color="green">255</FONT>                            }<a name="line.255"></a>
+<FONT color="green">256</FONT>                            return;<a name="line.256"></a>
+<FONT color="green">257</FONT>                    }<a name="line.257"></a>
+<FONT color="green">258</FONT>                    if (next.equals("ProcessorBinding")) {<a name="line.258"></a>
+<FONT color="green">259</FONT>                            level = Level.ProcessorBinding;<a name="line.259"></a>
+<FONT color="green">260</FONT>                            processorBinding = new ProcessorBinding();<a name="line.260"></a>
+<FONT color="green">261</FONT>                            String bindingName = parseName(scanner);<a name="line.261"></a>
+<FONT color="green">262</FONT>                            processorBinding.setName(bindingName);<a name="line.262"></a>
+<FONT color="green">263</FONT>                            profile.getProcessorBindings().add(processorBinding);<a name="line.263"></a>
+<FONT color="green">264</FONT>                            return;<a name="line.264"></a>
+<FONT color="green">265</FONT>                    }<a name="line.265"></a>
+<FONT color="green">266</FONT>                    if (next.equals("Activity") &amp;&amp; level == Level.ProcessorBinding) {<a name="line.266"></a>
+<FONT color="green">267</FONT>                            String activityName = parseName(scanner);<a name="line.267"></a>
+<FONT color="green">268</FONT>                            Activity boundActivity = profile.getActivities().getByName(<a name="line.268"></a>
+<FONT color="green">269</FONT>                                            activityName);<a name="line.269"></a>
+<FONT color="green">270</FONT>                            processorBinding.setBoundActivity(boundActivity);<a name="line.270"></a>
+<FONT color="green">271</FONT>                            return;<a name="line.271"></a>
+<FONT color="green">272</FONT>                    }<a name="line.272"></a>
+<FONT color="green">273</FONT>                    if (next.equals("Processor") &amp;&amp; level == Level.ProcessorBinding) {<a name="line.273"></a>
+<FONT color="green">274</FONT>                            String[] wfProcName = parseName(scanner).split(":");<a name="line.274"></a>
+<FONT color="green">275</FONT>                            Workflow wf = wb.getWorkflows().getByName(wfProcName[0]);<a name="line.275"></a>
+<FONT color="green">276</FONT>                            Processor boundProcessor = wf.getProcessors().getByName(<a name="line.276"></a>
+<FONT color="green">277</FONT>                                            wfProcName[1]);<a name="line.277"></a>
+<FONT color="green">278</FONT>                            processorBinding.setBoundProcessor(boundProcessor);<a name="line.278"></a>
+<FONT color="green">279</FONT>                            return;<a name="line.279"></a>
+<FONT color="green">280</FONT>                    }<a name="line.280"></a>
+<FONT color="green">281</FONT>                    if (next.equals("InputPortBindings")) {<a name="line.281"></a>
+<FONT color="green">282</FONT>                            level = Level.InputPortBindings;<a name="line.282"></a>
+<FONT color="green">283</FONT>                            return;<a name="line.283"></a>
+<FONT color="green">284</FONT>                    }<a name="line.284"></a>
+<FONT color="green">285</FONT>                    if (next.equals("OutputPortBindings")) {<a name="line.285"></a>
+<FONT color="green">286</FONT>                            level = Level.OutputPortBindings;<a name="line.286"></a>
+<FONT color="green">287</FONT>                            return;<a name="line.287"></a>
+<FONT color="green">288</FONT>                    }<a name="line.288"></a>
+<FONT color="green">289</FONT>    <a name="line.289"></a>
+<FONT color="green">290</FONT>                    if (next.startsWith("'")<a name="line.290"></a>
+<FONT color="green">291</FONT>                                    &amp;&amp; (level == Level.InputPortBindings || level == Level.OutputPortBindings)) {<a name="line.291"></a>
+<FONT color="green">292</FONT>                            Matcher linkMatcher = linkPattern.matcher(nextLine);<a name="line.292"></a>
+<FONT color="green">293</FONT>                            linkMatcher.find();<a name="line.293"></a>
+<FONT color="green">294</FONT>                            String firstLink = linkMatcher.group(1);<a name="line.294"></a>
+<FONT color="green">295</FONT>                            String secondLink = linkMatcher.group(2);<a name="line.295"></a>
+<FONT color="green">296</FONT>                            if (level == Level.InputPortBindings) {<a name="line.296"></a>
+<FONT color="green">297</FONT>                                    InputProcessorPort processorPort = processorBinding<a name="line.297"></a>
+<FONT color="green">298</FONT>                                    .getBoundProcessor().getInputPorts()<a name="line.298"></a>
+<FONT color="green">299</FONT>                                    .getByName(firstLink);<a name="line.299"></a>
+<FONT color="green">300</FONT>                                    InputActivityPort activityPort = processorBinding<a name="line.300"></a>
+<FONT color="green">301</FONT>                                    .getBoundActivity().getInputPorts()<a name="line.301"></a>
+<FONT color="green">302</FONT>                                    .getByName(secondLink);<a name="line.302"></a>
+<FONT color="green">303</FONT>                                    new ProcessorInputPortBinding(processorBinding, processorPort,<a name="line.303"></a>
+<FONT color="green">304</FONT>                                                    activityPort);<a name="line.304"></a>
+<FONT color="green">305</FONT>                            } else {<a name="line.305"></a>
+<FONT color="green">306</FONT>                                    OutputActivityPort activityPort = processorBinding<a name="line.306"></a>
+<FONT color="green">307</FONT>                                    .getBoundActivity().getOutputPorts()<a name="line.307"></a>
+<FONT color="green">308</FONT>                                    .getByName(firstLink);<a name="line.308"></a>
+<FONT color="green">309</FONT>                                    OutputProcessorPort processorPort = processorBinding<a name="line.309"></a>
+<FONT color="green">310</FONT>                                    .getBoundProcessor().getOutputPorts()<a name="line.310"></a>
+<FONT color="green">311</FONT>                                    .getByName(secondLink);<a name="line.311"></a>
+<FONT color="green">312</FONT>                                    new ProcessorOutputPortBinding(processorBinding, activityPort,<a name="line.312"></a>
+<FONT color="green">313</FONT>                                                    processorPort);<a name="line.313"></a>
+<FONT color="green">314</FONT>                            }<a name="line.314"></a>
+<FONT color="green">315</FONT>                            return;<a name="line.315"></a>
+<FONT color="green">316</FONT>                    }<a name="line.316"></a>
+<FONT color="green">317</FONT>                    if (next.equals("Configuration")) {<a name="line.317"></a>
+<FONT color="green">318</FONT>                            level = Level.Configuration;<a name="line.318"></a>
+<FONT color="green">319</FONT>                            configuration = new Configuration();<a name="line.319"></a>
+<FONT color="green">320</FONT>                            profile.getConfigurations().add(configuration);<a name="line.320"></a>
+<FONT color="green">321</FONT>                            String configName = parseName(scanner);<a name="line.321"></a>
+<FONT color="green">322</FONT>                            configuration.setName(configName);<a name="line.322"></a>
+<FONT color="green">323</FONT>                            return;<a name="line.323"></a>
+<FONT color="green">324</FONT>                    }<a name="line.324"></a>
+<FONT color="green">325</FONT>                    if (next.equals("Configures")) {<a name="line.325"></a>
+<FONT color="green">326</FONT>                            String configures = parseName(scanner);<a name="line.326"></a>
+<FONT color="green">327</FONT>                            if (configures.startsWith(ACTIVITY_SLASH)) {<a name="line.327"></a>
+<FONT color="green">328</FONT>                                    String activityName = configures.substring(<a name="line.328"></a>
+<FONT color="green">329</FONT>                                                    ACTIVITY_SLASH.length(), configures.length());<a name="line.329"></a>
+<FONT color="green">330</FONT>                                    activity = profile.getActivities().getByName(activityName);<a name="line.330"></a>
+<FONT color="green">331</FONT>                                    configuration.setConfigures(activity);<a name="line.331"></a>
+<FONT color="green">332</FONT>                                    return;<a name="line.332"></a>
+<FONT color="green">333</FONT>                            } else {<a name="line.333"></a>
+<FONT color="green">334</FONT>                                    throw new UnsupportedOperationException("Unknown Configures "<a name="line.334"></a>
+<FONT color="green">335</FONT>                                                    + configures);<a name="line.335"></a>
+<FONT color="green">336</FONT>                            }<a name="line.336"></a>
+<FONT color="green">337</FONT>                    }<a name="line.337"></a>
+<FONT color="green">338</FONT>                    if (next.equals("Property")) {<a name="line.338"></a>
+<FONT color="green">339</FONT>                            propertyUri = URI.create(nextLine.split("[&lt;&gt;]")[1]);<a name="line.339"></a>
+<FONT color="green">340</FONT>                            level = Level.Property;<a name="line.340"></a>
+<FONT color="green">341</FONT>                            return;<a name="line.341"></a>
+<FONT color="green">342</FONT>                    }<a name="line.342"></a>
+<FONT color="green">343</FONT>                    if (level == Level.Property) {<a name="line.343"></a>
+<FONT color="green">344</FONT>                            boolean finished = false;<a name="line.344"></a>
+<FONT color="green">345</FONT>                            String[] split = nextLine.split("'''", 3);<a name="line.345"></a>
+<FONT color="green">346</FONT>                            if (split.length == 1) {<a name="line.346"></a>
+<FONT color="green">347</FONT>                                    largeString.append(split[0]);<a name="line.347"></a>
+<FONT color="green">348</FONT>                                    largeString.append('\n');<a name="line.348"></a>
+<FONT color="green">349</FONT>                            } else if (next.startsWith("'''")) {<a name="line.349"></a>
+<FONT color="green">350</FONT>                                    largeString = new StringBuffer();<a name="line.350"></a>
+<FONT color="green">351</FONT>                                    largeString.append(split[1]);<a name="line.351"></a>
+<FONT color="green">352</FONT>                                    if (split.length == 3) {<a name="line.352"></a>
+<FONT color="green">353</FONT>                                            // It was a one-liner<a name="line.353"></a>
+<FONT color="green">354</FONT>                                            finished = true;<a name="line.354"></a>
+<FONT color="green">355</FONT>                                    } else {<a name="line.355"></a>
+<FONT color="green">356</FONT>                                            largeString.append('\n');<a name="line.356"></a>
+<FONT color="green">357</FONT>                                    }<a name="line.357"></a>
+<FONT color="green">358</FONT>                            } else {<a name="line.358"></a>
+<FONT color="green">359</FONT>                                    largeString.append(split[0]);<a name="line.359"></a>
+<FONT color="green">360</FONT>                                    // Assuming length is 2<a name="line.360"></a>
+<FONT color="green">361</FONT>                                    finished = true;<a name="line.361"></a>
+<FONT color="green">362</FONT>                            }<a name="line.362"></a>
+<FONT color="green">363</FONT>    <a name="line.363"></a>
+<FONT color="green">364</FONT>                            if (finished) {<a name="line.364"></a>
+<FONT color="green">365</FONT>                                    configuration.getPropertyResource().addPropertyAsString(<a name="line.365"></a>
+<FONT color="green">366</FONT>                                                    propertyUri, largeString.toString());<a name="line.366"></a>
+<FONT color="green">367</FONT>                                    largeString = null;<a name="line.367"></a>
+<FONT color="green">368</FONT>                                    propertyUri = null;<a name="line.368"></a>
+<FONT color="green">369</FONT>                                    level = Level.Configuration;<a name="line.369"></a>
+<FONT color="green">370</FONT>                            }<a name="line.370"></a>
+<FONT color="green">371</FONT>    <a name="line.371"></a>
+<FONT color="green">372</FONT>                    }<a name="line.372"></a>
+<FONT color="green">373</FONT>    <a name="line.373"></a>
+<FONT color="green">374</FONT>            }<a name="line.374"></a>
+<FONT color="green">375</FONT>    <a name="line.375"></a>
+<FONT color="green">376</FONT>    <a name="line.376"></a>
+<FONT color="green">377</FONT>            private String parseName(Scanner scanner) {<a name="line.377"></a>
+<FONT color="green">378</FONT>                    String name = scanner.findInLine("'(.*[^\\\\])'");<a name="line.378"></a>
+<FONT color="green">379</FONT>                    return name.substring(1, name.length() - 1);<a name="line.379"></a>
+<FONT color="green">380</FONT>            }<a name="line.380"></a>
+<FONT color="green">381</FONT>    <a name="line.381"></a>
+<FONT color="green">382</FONT>            @Override<a name="line.382"></a>
+<FONT color="green">383</FONT>            public WorkflowBundle readBundle(File bundleFile, String mediaType)<a name="line.383"></a>
+<FONT color="green">384</FONT>            throws IOException, ReaderException {<a name="line.384"></a>
+<FONT color="green">385</FONT>                    BufferedInputStream is = new BufferedInputStream(new FileInputStream(<a name="line.385"></a>
+<FONT color="green">386</FONT>                                    bundleFile));<a name="line.386"></a>
+<FONT color="green">387</FONT>                    try {<a name="line.387"></a>
+<FONT color="green">388</FONT>                            return parse(is);<a name="line.388"></a>
+<FONT color="green">389</FONT>                    } finally {<a name="line.389"></a>
+<FONT color="green">390</FONT>                            is.close();<a name="line.390"></a>
+<FONT color="green">391</FONT>                    }<a name="line.391"></a>
+<FONT color="green">392</FONT>            }<a name="line.392"></a>
+<FONT color="green">393</FONT>    <a name="line.393"></a>
+<FONT color="green">394</FONT>            @Override<a name="line.394"></a>
+<FONT color="green">395</FONT>            public WorkflowBundle readBundle(InputStream inputStream, String mediaType)<a name="line.395"></a>
+<FONT color="green">396</FONT>            throws IOException, ReaderException {<a name="line.396"></a>
+<FONT color="green">397</FONT>                    return parse(inputStream);<a name="line.397"></a>
+<FONT color="green">398</FONT>    <a name="line.398"></a>
+<FONT color="green">399</FONT>            }<a name="line.399"></a>
+<FONT color="green">400</FONT>    <a name="line.400"></a>
+<FONT color="green">401</FONT>            @Override<a name="line.401"></a>
+<FONT color="green">402</FONT>            public String guessMediaTypeForSignature(byte[] firstBytes) {<a name="line.402"></a>
+<FONT color="green">403</FONT>                    if (new String(firstBytes, Charset.forName("ISO-8859-1")).contains("WorkflowBundle '")) {<a name="line.403"></a>
+<FONT color="green">404</FONT>                            return TEXT_VND_TAVERNA_SCUFL2_STRUCTURE;<a name="line.404"></a>
+<FONT color="green">405</FONT>                    }<a name="line.405"></a>
+<FONT color="green">406</FONT>                    return null;<a name="line.406"></a>
+<FONT color="green">407</FONT>            }<a name="line.407"></a>
+<FONT color="green">408</FONT>    <a name="line.408"></a>
+<FONT color="green">409</FONT>    }<a name="line.409"></a>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</PRE>
+</BODY>
+</HTML>
