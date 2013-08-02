@@ -11,8 +11,10 @@ import static uk.org.taverna.scufl2.translator.t2flow.t23activities.ExternalTool
 import static uk.org.taverna.scufl2.translator.t2flow.t23activities.ExternalToolActivityParser.CNT;
 import static uk.org.taverna.scufl2.translator.t2flow.t23activities.ExternalToolActivityParser.DC;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
+import java.util.Iterator;
 import java.util.SortedSet;
 
 import javax.xml.bind.JAXBException;
@@ -20,9 +22,6 @@ import javax.xml.bind.JAXBException;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import uk.org.taverna.scufl2.api.activity.Activity;
 import uk.org.taverna.scufl2.api.common.Scufl2Tools;
@@ -34,6 +33,13 @@ import uk.org.taverna.scufl2.api.port.OutputActivityPort;
 import uk.org.taverna.scufl2.api.profiles.Profile;
 import uk.org.taverna.scufl2.translator.t2flow.T2FlowParser;
 import uk.org.taverna.scufl2.translator.t2flow.T2Parser;
+
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonParser.Feature;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class TestExternalToolActivityParser {
 	private static final String WF_2_2 = "/tool-2-2.t2flow";
@@ -76,16 +82,24 @@ public class TestExternalToolActivityParser {
 		Activity activity = (Activity) config.getConfigures();
 		assertEquals(ACTIVITY_URI, activity.getType());
 
-		String repositoryUrl = config.getJson().get("repositoryUrl").asText();
-		assertEquals("http://taverna.nordugrid.org/sharedRepository/xml.php", repositoryUrl);
-		String toolId = config.getJson().get("toolId").asText();
-		assertEquals("cat", toolId);
-
-		// Not much more to check as 2.2 does not include tool description
-
+		assertJsonEquals("{repositoryUrl:'http://taverna.nordugrid.org/sharedRepository/xml.php', toolId:'cat'}", config.getJson());
 	}
 
-	@Test
+	public static void assertJsonEquals(String expected, JsonNode actual) throws JsonParseException, IOException {
+	    JsonNode expectedJson = readJson(expected);
+	    assertEquals("Did not match expected json", expectedJson, actual);
+    }
+
+    private static JsonNode readJson(String jsonStr) throws IOException,
+            JsonProcessingException {
+        ObjectMapper mapper = new ObjectMapper();
+	    // A bit more permissable so we can can avoid \" within Java strings
+	    mapper.configure(Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
+	    mapper.configure(Feature.ALLOW_SINGLE_QUOTES, true);
+	    return mapper.readTree(jsonStr);
+    }
+
+    @Test
 	@Ignore("Parser changed, testing using parse2_2_resaved_simple instead")
 	public void parse2_2_resaved() throws Exception {
 		URL wfResource = getClass().getResource(WF_2_2_RESAVED_2_3);
@@ -99,12 +113,9 @@ public class TestExternalToolActivityParser {
 		assertNotNull(config);
 		assertEquals(ACTIVITY_URI.resolve("#Config"), config.getType());
 		JsonNode resource = config.getJson();
-		assertTrue(resource.has("toolId"));
-		String toolId = resource.get("toolId").asText();
-		assertEquals("http://taverna.nordugrid.org/sharedRepository/xml.php#cat",
-				toolId);
-		assertEquals(false, resource.get("edited").asBoolean());
-
+		
+		assertJsonMatches("{toolId:'cat', edited: false}", config.getJson());
+		
 		ObjectNode invocation = (ObjectNode) resource.get("invocation");
 
         assertEquals("local", invocation.get("mechanismType").asText());
@@ -191,7 +202,31 @@ public class TestExternalToolActivityParser {
 
 	}
 
-	@Test
+    public static assertJsonMatches(String expectedStr, JsonNode actual) {
+	        JsonNode expected = readJson(expectedStr);
+	        if (expected.isArray()) {
+	            for (int i=0; i<expected.size(); i++) {
+	                assertEquals("Did not match in array at position " + i, expected.get(i), actual.get(i));
+	            }
+	        } else if (expected.isObject()) {
+	            for (String field : iterable(expected.fieldNames())) {
+	                assertEquals("Did not match in object at field " + field, expected.get(field), actual.get(field));
+	            }
+	        } else {
+	            assertEquals("Did not match expected json", expected, actual);
+	        }
+	    }
+
+    public static <T> Iterable<T> iterable(final Iterator<T> iterator) {
+        return new Iterable<T>() {
+            @Override
+            public Iterator<T> iterator() {
+                return iterator;
+            }
+        };
+    }
+
+    @Test
 	public void parse2_2_resaved_simple() throws Exception {
 		URL wfResource = getClass().getResource(WF_2_2_RESAVED_2_3);
 		assertNotNull("Could not find workflow " + WF_2_2_RESAVED_2_3, wfResource);
