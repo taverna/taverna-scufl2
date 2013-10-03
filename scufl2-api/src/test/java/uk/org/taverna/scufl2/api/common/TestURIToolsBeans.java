@@ -74,7 +74,7 @@ public class TestURIToolsBeans {
 				.getByName("Hello");
 		URI uri = uriTools.uriForBean(config);
 		assertEquals(BUNDLE_URI + "profile/tavernaWorkbench/"
-				+ "configuration/Hello/" + "", uri.toASCIIString());
+				+ "configuration/Hello/", uri.toASCIIString());
 	}
 
 	@Test
@@ -329,7 +329,7 @@ public class TestURIToolsBeans {
 						+ "    processorbinding/Hello/\n"
 						+ "      in/name\n"
 						+ "      out/greeting\n"
- + "    configuration/Hello/\n",
+						+ "    configuration/Hello/\n",
 				paths.toString());
 	}
 

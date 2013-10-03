@@ -115,8 +115,7 @@ public class URITools {
     				    uriToBean.put(uri, existing);
     				}
 				}
-
-				return !(node instanceof Configuration);
+				return true;
 			}
 		});
 		if (!uri.isAbsolute()) {

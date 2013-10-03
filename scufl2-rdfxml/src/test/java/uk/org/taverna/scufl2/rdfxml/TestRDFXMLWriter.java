@@ -1,7 +1,7 @@
 package uk.org.taverna.scufl2.rdfxml;
 
-import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -18,6 +18,8 @@ import uk.org.taverna.scufl2.api.io.TestWorkflowBundleIO;
 import uk.org.taverna.scufl2.api.io.WorkflowBundleIO;
 import uk.org.taverna.scufl2.ucfpackage.UCFPackage;
 import uk.org.taverna.scufl2.ucfpackage.UCFPackage.ResourceEntry;
+
+import com.fasterxml.jackson.databind.JsonNode;
 
 public class TestRDFXMLWriter {
 
@@ -42,8 +44,9 @@ public class TestRDFXMLWriter {
                 APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
         UCFPackage ucfPackage = new UCFPackage(bundleFile);
         Map<String, ResourceEntry> profiles = ucfPackage.listResources("profile");
-        assertEquals(1, profiles.size());
-        assertEquals("Funny_%2f_characters_50%25_of%20the%20time.rdf", profiles.keySet().iterator().next());
+        assertEquals(2, profiles.size());
+        assertTrue(profiles.keySet().contains("Funny_%2f_characters_50%25_of%20the%20time.rdf"));
+        assertTrue(profiles.keySet().contains("Funny_%2f_characters_50%25_of%20the%20time/"));
         
         Map<String, ResourceEntry> workflows = ucfPackage.listResources("workflow");
         assertEquals(1, workflows.size());
@@ -53,6 +56,12 @@ public class TestRDFXMLWriter {
         WorkflowBundle readBundle = bundleIO.readBundle(bundleFile, APPLICATION_VND_TAVERNA_SCUFL2_WORKFLOW_BUNDLE);
         assertEquals(funnyName, readBundle.getMainProfile().getName());
         assertEquals(funnyName, readBundle.getMainWorkflow().getName());
+        // did the JSON parse back in?
+        JsonNode oldJson = workflowBundle.getMainProfile().getConfigurations().getByName("Hello").getJson();
+        assertTrue(oldJson.get("script").asText().startsWith("hello"));           
+        JsonNode newJson = readBundle.getMainProfile().getConfigurations().getByName("Hello").getJson();
+        assertTrue(newJson.get("script").asText().startsWith("hello"));        
+        assertEquals(oldJson, newJson);
     }
 
 	@Test

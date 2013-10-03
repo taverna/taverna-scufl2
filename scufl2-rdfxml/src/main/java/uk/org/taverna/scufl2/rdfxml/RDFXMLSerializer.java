@@ -113,17 +113,25 @@ public class RDFXMLSerializer {
 			configuration.setConfigure(resource(uri(node.getConfigures())));
 			configuration.setName(node.getName());
 			configuration.setType(type(node));
+			
+			URI configUri = uriTools.relativeUriForBean(node, profile);
+            String jsonPath = configUri.toString().replaceFirst("/$", ".json");
 
-			URI baseUri = uriTools.uriForBean(profile);
-			String jsonPath = "configuration/" + uriTools.validFilename(node.getName() + ".json");
+			URI profilePath = uriTools.relativeUriForBean(profile, profile.getParent());
+			
+			String bundlePath = profilePath + jsonPath;
+			
 			UCFPackage bundle = profile.getParent().getResources();
 			try {
-                bundle.addResource(node.getJsonAsString(), jsonPath, "application/json");
+                bundle.addResource(node.getJsonAsString(), bundlePath, "application/json");
             } catch (IOException e) {
-                logger.log(Level.WARNING, "Can't save JSON to " + jsonPath, e);
+                logger.log(Level.WARNING, "Can't save JSON to " + bundlePath, e);
             }
-			// FIXME: Make this relative URI dynamically
-			configuration.setAbout("../../" + jsonPath);
+			configuration.setAbout(configUri.toString());
+			
+			SeeAlso seeAlso = rdfsObjectFactory.createSeeAlso();
+			seeAlso.setResource(jsonPath);
+			configuration.setSeeAlso(seeAlso);
             
 			// TODO: No way in API to mark non-activated configurations
 			profileElem.getActivateConfiguration().add(resource(uri(node)));
@@ -256,7 +264,6 @@ public class RDFXMLSerializer {
 				processorOutputPortBinding((ProcessorOutputPortBinding) node);
 			} else if (node instanceof Configuration) {
 				configuration((Configuration) node);
-				return false;
 			} else {
 				throw new IllegalStateException("Unexpected node " + node);
 			}
