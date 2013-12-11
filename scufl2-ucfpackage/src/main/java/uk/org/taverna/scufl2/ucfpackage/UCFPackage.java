@@ -387,7 +387,7 @@ public class UCFPackage implements Cloneable {
         }
 
         public String getPath() {
-			return path.toString();
+			return path.toString().replaceFirst("^/", "");
 		}
 
 		public long getSize() {
