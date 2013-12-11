@@ -25,6 +25,11 @@
 			<artifactId>jaxen</artifactId>
 			<scope>test</scope>
 		</dependency>
+        <dependency>
+            <groupId>org.purl.wf4ever.robundle</groupId>
+            <artifactId>robundle</artifactId>
+            <version>0.3.0-SNAPSHOT</version>
+        </dependency>
 	</dependencies>
 	<licenses>
 		<license>
