@@ -584,7 +584,10 @@ public class UCFPackage implements Cloneable {
 
 	public ResourceEntry getResourceEntry(String path) {
 	    Path bundlePath = bundle.getRoot().resolve(path);
-		return new ResourceEntry(bundlePath);
+	    if (Files.exists(bundlePath)) {
+	    	return new ResourceEntry(bundlePath);
+	    }
+	    return null;
 	}
 
 	@SuppressWarnings("rawtypes")
