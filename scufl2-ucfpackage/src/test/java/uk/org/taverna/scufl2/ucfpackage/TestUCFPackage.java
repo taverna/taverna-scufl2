@@ -99,10 +99,12 @@ public class TestUCFPackage {
 		container.setPackageMediaType("nonvalid");
 	}
 
-	@Test(expected = IllegalStateException.class)
-	public void noDefaultMimeType() throws Exception {
+	@Test
+	public void defaultMimeType() throws Exception {
 		UCFPackage container = new UCFPackage();
 		container.save(tmpFile);
+		assertEquals("application/vnd.wf4ever.robundle+zip", 
+				container.getPackageMediaType());
 	}
 
 	@Test
