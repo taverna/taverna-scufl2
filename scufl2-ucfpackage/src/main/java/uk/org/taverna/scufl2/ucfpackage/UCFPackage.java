@@ -75,6 +75,7 @@ public class UCFPackage implements Cloneable {
 		} catch (Exception e) {
 			throw new IOException("Could not create empty UCF Package", e);
 		}
+		Bundles.setMimeType(bundle, MIME_EPUB);
 		// odfPackage.setMediaType(MIME_EPUB);
 	}
 
@@ -244,8 +245,8 @@ public class UCFPackage implements Cloneable {
 			jaxbContext = JAXBContext
 					.newInstance(
 							org.oasis_open.names.tc.opendocument.xmlns.container.ObjectFactory.class,
-							org.w3._2000._09.xmldsig.ObjectFactory.class,
-							org.w3._2001._04.xmlenc.ObjectFactory.class);
+							org.w3._2000._09.xmldsig_.ObjectFactory.class,
+							org.w3._2001._04.xmlenc_.ObjectFactory.class);
 		}
 		return jaxbContext;
 	}

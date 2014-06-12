@@ -20,8 +20,15 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<jaxb.version>2.2.4-1</jaxb.version>
-        <jackson.version>2.2.3</jackson.version>
+		<jaxb.version>2.2.7</jaxb.version>
+
+		<robundle.version>0.4.2-SNAPSHOT</robundle.version>
+                <!-- Raven: Jena and Jackson versions must match dependencies from jsonld
+		       (coming from robundle) -->
+                <jackson.version>2.3.3</jackson.version>
+                <jena.version>2.11.1</jena.version>     
+		<jsonld.version>0.4.1</jsonld.version>
+
 	</properties>
 	<dependencies>
 		<!-- Common dependencies - keep these to a minimum as we want to reduce 
@@ -64,7 +71,7 @@
 				<plugin>
 					<groupId>org.codehaus.mojo</groupId>
 					<artifactId>jaxb2-maven-plugin</artifactId>
-					<version>1.5</version>
+					<version>1.6</version>
 					<configuration>
 						<target>2.1</target>
 						<arguments>-enableIntrospection</arguments>

@@ -25,19 +25,12 @@
 			<artifactId>jaxen</artifactId>
 			<scope>test</scope>
 		</dependency>
-        <dependency>
-            <groupId>org.purl.wf4ever.robundle</groupId>
-            <artifactId>robundle</artifactId>
-            <version>0.4.2-SNAPSHOT</version>
-        </dependency>
+		<dependency>
+			<groupId>org.purl.wf4ever.robundle</groupId>
+			<artifactId>robundle</artifactId>
+			<version>${robundle.version}</version>
+		</dependency>
 	</dependencies>
-	<licenses>
-		<license>
-			<name>GNU Lesser General Public License</name>
-			<url>http://www.gnu.org/licenses/lgpl.txt</url>
-			<distribution>repo</distribution>
-		</license>
-	</licenses>
 
 	<build>
 		<plugins>
