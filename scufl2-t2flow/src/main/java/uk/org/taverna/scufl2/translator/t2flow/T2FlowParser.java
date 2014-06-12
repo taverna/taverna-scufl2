@@ -337,7 +337,7 @@ public class T2FlowParser {
 		parserState.get().setCurrentT2Parser(null);
 		T2Parser t2Parser = getT2Parser(classURI);
 		if (t2Parser == null) {
-			String message = "Unknown T2 activity " + classURI
+			String message = "Unknown T2 activity or dispatch layer " + classURI
 					+ ", install supporting T2Parser";
 			if (isStrict()) {
 				throw new ReaderException(message);
@@ -746,8 +746,10 @@ public class T2FlowParser {
                    
                    // A potentially multi-line string
                    turtle.append("\"\"\"");
+                   // Escape existing \ to \\
+                   String escaped = value.replace("\\", "\\\\");
                    // Escape existing """ to \"\"\"  (beware Java's escaping of \ and ")
-                   String escaped = value.replace("\"\"\"", "\\\"\\\"\\\"");
+                   escaped = escaped.replace("\"\"\"", "\\\"\\\"\\\"");
                    turtle.append(escaped);
                    turtle.append("\"\"\"");
                    turtle.append(" .");
