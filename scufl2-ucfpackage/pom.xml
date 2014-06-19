@@ -30,10 +30,19 @@
 			<artifactId>robundle</artifactId>
 			<version>${robundle.version}</version>
 		</dependency>
+		<!-- 
+		<dependency>
+			<groupId>com.sun.xml.bind</groupId>
+			<artifactId>jaxb-impl</artifactId>
+			<optional>true</optional>
+		</dependency>
+		 -->
 	</dependencies>
 
 	<build>
 		<plugins>
+		<!-- 
+
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>jaxb2-maven-plugin</artifactId>
@@ -49,6 +58,7 @@
 					</execution>
 				</executions>
 			</plugin>
+					 -->
 		</plugins>
 	</build>
 

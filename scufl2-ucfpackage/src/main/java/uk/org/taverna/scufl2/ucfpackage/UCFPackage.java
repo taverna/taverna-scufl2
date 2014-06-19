@@ -8,8 +8,6 @@ import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.net.URI;
-import java.nio.charset.Charset;
-import java.nio.file.DirectoryStream;
 import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
 import java.nio.file.Files;
@@ -18,17 +16,11 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBElement;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerException;
@@ -36,10 +28,6 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import org.oasis_open.names.tc.opendocument.xmlns.container.Container;
-import org.oasis_open.names.tc.opendocument.xmlns.container.Container.RootFiles;
-import org.oasis_open.names.tc.opendocument.xmlns.container.ObjectFactory;
-import org.oasis_open.names.tc.opendocument.xmlns.container.RootFile;
 import org.purl.wf4ever.robundle.Bundle;
 import org.purl.wf4ever.robundle.Bundles;
 import org.purl.wf4ever.robundle.manifest.Manifest;
@@ -52,7 +40,6 @@ public class UCFPackage implements Cloneable {
 	private static Logger logger = Logger.getLogger(UCFPackage.class.getName());
 	private static final URI VERSION_BASE = URI.create("http://ns.taverna.org.uk/2010/scufl2/");
 	private static final String CONTAINER_XML = "META-INF/container.xml";
-	private static final Charset UTF_8 = Charset.forName("utf-8");
 	public static final String MIME_BINARY = "application/octet-stream";
 	public static final String MIME_TEXT_PLAIN = "text/plain";
 	public static final String MIME_TEXT_XML = "text/xml";
@@ -60,13 +47,8 @@ public class UCFPackage implements Cloneable {
 	public static final String MIME_EPUB = "application/epub+zip";
 	public static final String MIME_WORKFLOW_BUNDLE = "application/vnd.taverna.workflow-bundle";	
 
-	private static Charset ASCII = Charset.forName("ascii");
-//	private OdfPackage odfPackage;
-	private static JAXBContext jaxbContext;
-	private JAXBElement<Container> containerXml;
-	private boolean createdContainerXml = false;
     private Bundle bundle;
-	private static ObjectFactory containerFactory = new ObjectFactory();
+    
 
 	public UCFPackage() throws IOException {
 		try {
@@ -74,7 +56,6 @@ public class UCFPackage implements Cloneable {
 			//odfPackage = OdfPackage.create();
 		    bundle.getManifest().populateFromBundle();
 		    bundle.getManifest().writeAsODFManifest();
-			parseContainerXML();
 		} catch (IOException e) {
 			throw e;
 		} catch (Exception e) {
@@ -90,7 +71,6 @@ public class UCFPackage implements Cloneable {
 
 	protected void open(File containerFile) throws IOException {
 	    bundle = Bundles.openBundleReadOnly(containerFile.toPath());
-	    parseContainerXML();
 	}
 
 	public UCFPackage(InputStream inputStream) throws IOException {
@@ -99,7 +79,6 @@ public class UCFPackage implements Cloneable {
 
 	protected UCFPackage(Bundle bundle) throws IOException {
 	    this.bundle = bundle;
-	    parseContainerXML();
     }
 
     protected void open(InputStream inputStream) throws IOException {
@@ -108,35 +87,12 @@ public class UCFPackage implements Cloneable {
 		    Files.copy(inputStream, bundlePath);
 		    bundle = Bundles.openBundle(bundlePath);
 		    bundle.setDeleteOnClose(true);
-		    
-			parseContainerXML();
 		} catch (IOException e) {
 			throw e;
 		} catch (Exception e) {
 			throw new IOException(
 					"Could not load UCF Package from input stream", e);
 		}
-	}
-
-	@SuppressWarnings("unchecked")
-	protected void parseContainerXML() throws IOException {
-		createdContainerXml = false;
-		if (getResourceEntry(CONTAINER_XML) == null) {
-			// Make an empty containerXml
-			Container container = containerFactory.createContainer();
-			containerXml = containerFactory.createContainer(container);
-			createdContainerXml = true;
-			return;
-		}
-		try {			
-			InputStream containerStream = getResourceAsInputStream(CONTAINER_XML);
-			Unmarshaller unMarshaller = createUnMarshaller();
-			containerXml = (JAXBElement<Container>) unMarshaller
-					.unmarshal(containerStream);
-		} catch (JAXBException e) {
-			throw new IOException("Could not parse " + CONTAINER_XML, e);
-		}
-
 	}
 
 	public String getPackageMediaType() {
@@ -156,8 +112,6 @@ public class UCFPackage implements Cloneable {
 	}
 
 	public void save(File packageFile) throws IOException {
-	    prepareContainerXML();
-
 	    Path source = bundle.getSource();	    
 	    boolean deleteOnClose = bundle.isDeleteOnClose();	 
 	    bundle.setDeleteOnClose(false);
@@ -167,94 +121,6 @@ public class UCFPackage implements Cloneable {
 	    bundle.setDeleteOnClose(deleteOnClose);
 	}
 
-	protected void prepareContainerXML() throws IOException {
-		if (containerXml == null || createdContainerXml
-				&& containerXml.getValue().getRootFilesOrAny() == null) {
-			return;
-		}
-
-		/* Check if we should prune <rootFiles> */
-		Iterator<Object> iterator = containerXml.getValue().getRootFilesOrAny()
-				.iterator();
-		boolean foundAlready = false;
-		while (iterator.hasNext()) {
-			Object anyOrRoot = iterator.next();
-			if (!(anyOrRoot instanceof JAXBElement)) {
-				continue;
-			}
-			@SuppressWarnings("rawtypes")
-			JAXBElement elem = (JAXBElement) anyOrRoot;
-			if (!elem.getDeclaredType().equals(RootFiles.class)) {
-				continue;
-			}
-			RootFiles rootFiles = (RootFiles) elem.getValue();
-			if (foundAlready
-					|| (rootFiles.getOtherAttributes().isEmpty() && rootFiles
-							.getAnyOrRootFile().isEmpty())) {
-				// Delete it!
-				System.err.println("Deleting unneccessary <rootFiles>");
-				iterator.remove();
-			}
-			foundAlready = true;
-		}
-
-		Marshaller marshaller;
-		OutputStream outStream = null;
-		try {
-			marshaller = createMarshaller();
-			// XMLStreamWriter xmlStreamWriter = XMLOutputFactory
-			// .newInstance().createXMLStreamWriter(outStream);
-			// xmlStreamWriter.setDefaultNamespace(containerElem.getName()
-			// .getNamespaceURI());
-			//
-			// xmlStreamWriter.setPrefix("dsig",
-			// "http://www.w3.org/2000/09/xmldsig#");
-			// xmlStreamWriter.setPrefix("xmlenc",
-			// "http://www.w3.org/2001/04/xmlenc#");
-			Path containerPath = writableBundlePath(CONTAINER_XML);
-			outStream = Files.newOutputStream(containerPath);
-
-			// FIXME: Set namespace prefixes and default namespace
-
-			marshaller.setProperty("jaxb.formatted.output", true);
-
-			// TODO: Ensure using default namespace
-			marshaller.marshal(containerXml, outStream);
-
-		} catch (IOException e) {
-			throw e;
-		} catch (Exception e) {
-			throw new IOException("Could not parse " + CONTAINER_XML, e);
-		} finally {
-			if (outStream != null) {
-				outStream.close();
-			}
-		}
-	}
-
-	protected static synchronized Marshaller createMarshaller()
-			throws JAXBException {
-		return getJaxbContext().createMarshaller();
-	}
-
-	protected static synchronized Unmarshaller createUnMarshaller()
-			throws JAXBException {
-		Unmarshaller unmarshaller = getJaxbContext().createUnmarshaller();
-
-		return unmarshaller;
-	}
-
-	protected static synchronized JAXBContext getJaxbContext()
-			throws JAXBException {
-		if (jaxbContext == null) {
-			jaxbContext = JAXBContext
-					.newInstance(
-							org.oasis_open.names.tc.opendocument.xmlns.container.ObjectFactory.class,
-							org.w3._2000._09.xmldsig_.ObjectFactory.class,
-							org.w3._2001._04.xmlenc_.ObjectFactory.class);
-		}
-		return jaxbContext;
-	}
 
 	public void addResource(String stringValue, String path, String mediaType)
 			throws IOException {	    
@@ -306,10 +172,6 @@ public class UCFPackage implements Cloneable {
         } catch (TransformerException e) {
             throw new IOException("Can't save XML to " + path, e);
         }
-
-		if (path.equals(CONTAINER_XML)) {
-			parseContainerXML();
-		}
 	}
 
 	public void addResource(InputStream inputStream, String path,
@@ -514,123 +376,33 @@ public class UCFPackage implements Cloneable {
 	}
 	
 	public void setRootFile(String path) {
-	    setRootFile(path, null);
+		bundle.addRootFile(bundle.getPath(path));
 	}
 
 	@SuppressWarnings("rawtypes")
 	public void setRootFile(String path, String version) {
-		ResourceEntry rootFile = getResourceEntry(path);
-		if (rootFile == null) {
-			throw new IllegalArgumentException("Unknown resource: " + path);
+		setRootFile(path);
+		if (version == null) {
+			return;
+		}
+		try {
+			PathMetadata metadata = bundle.getManifest().getAggregation(bundle.getPath(path));
+			metadata.setConformsTo(VERSION_BASE.resolve(version));
+		} catch (IOException e) {
+			throw new RuntimeException("Could not set root file: "+ path, e);
 		}		
-		
-		URI conformsTo = null;
-		if (version != null) {
-		    conformsTo = VERSION_BASE.resolve(version);
-		    PathMetadata aggregation;
-            try {
-                aggregation = bundle.getManifest().getAggregation(rootFile.path);
-            } catch (IOException e) {
-                throw new RuntimeException("Can't get root file aggregation for " + path, e);
-            }
-		    aggregation.setConformsTo(conformsTo);
-		}
-		
-		Container container = containerXml.getValue();
-
-		RootFiles rootFiles = getRootFiles(container);
-		String mediaType = rootFile.getMediaType();
-		boolean foundExisting = false;
-		// Check any existing files for matching path/mime type
-		Iterator<Object> anyOrRootIt = rootFiles.getAnyOrRootFile().iterator();
-		while (anyOrRootIt.hasNext()) {
-			Object anyOrRoot = anyOrRootIt.next();
-			if (anyOrRoot instanceof JAXBElement) {
-				anyOrRoot = ((JAXBElement) anyOrRoot).getValue();
-			}
-			if (!(anyOrRoot instanceof RootFile)) {
-				continue;
-			}
-			RootFile rootFileElem = (RootFile) anyOrRoot;
-			if (!rootFileElem.getFullPath().equals(path)
-					&& !rootFileElem.getMediaType().equals(mediaType)) {
-				// Different path and media type - ignore
-				continue;
-			}
-			if (foundExisting) {
-				// Duplicate path/media type, we'll remove it
-				anyOrRootIt.remove();
-				continue;
-			}
-			rootFileElem.setFullPath(rootFile.getPath());
-			if (mediaType != null) {
-				rootFileElem.setMediaType(mediaType);
-			}
-			
-			foundExisting = true;
-		}
-		if (!foundExisting) {
-			RootFile rootFileElem = containerFactory.createRootFile();
-			rootFileElem.setFullPath(rootFile.getPath());
-			rootFileElem.setMediaType(mediaType);
-			rootFiles.getAnyOrRootFile().add(
-					containerFactory
-							.createContainerRootFilesRootFile(rootFileElem));
-			// rootFiles.getAnyOrRootFile().add(rootFileElem);
-		}
 	}
 
-	protected RootFiles getRootFiles(Container container) {
-
-		for (Object o : container.getRootFilesOrAny()) {
-			if (o instanceof JAXBElement) {
-				@SuppressWarnings("rawtypes")
-				JAXBElement jaxbElement = (JAXBElement) o;
-				o = jaxbElement.getValue();
-			}
-			if (o instanceof RootFiles) {
-				return (RootFiles) o;
+	public List<ResourceEntry> getRootFiles() {
+		List<ResourceEntry> files = new ArrayList<>();
+		for (Path path : bundle.getRootFiles()) {
+			if (Files.exists(path)) { 
+				files.add(new ResourceEntry(path));
 			}
 		}
-		// Not found - add it
-		RootFiles rootFiles = containerFactory.createContainerRootFiles();
-		container.getRootFilesOrAny().add(
-				containerFactory.createContainerRootFiles(rootFiles));
-		return rootFiles;
+		return files;
 	}
 	
-	@SuppressWarnings("rawtypes")
-	public List<ResourceEntry> getRootFiles() {
-		ArrayList<UCFPackage.ResourceEntry> rootFiles = new ArrayList<UCFPackage.ResourceEntry>();
-		if (containerXml == null) {
-			return rootFiles;
-		}
-
-		RootFiles rootFilesElem = getRootFiles(containerXml.getValue());
-		for (Object anyOrRoot : rootFilesElem.getAnyOrRootFile()) {
-			if (anyOrRoot instanceof JAXBElement) {
-				anyOrRoot = ((JAXBElement) anyOrRoot).getValue();
-			}
-			if (!(anyOrRoot instanceof RootFile)) {
-				continue;
-			}
-			RootFile rf = (RootFile) anyOrRoot;
-			ResourceEntry entry = getResourceEntry(rf.getFullPath());
-			if (rf.getMediaType() != null
-					&& rf.getMediaType() != entry.getMediaType()) {
-				// Override the mime type in the returned entry
-			    PathMetadata aggr;
-                try {
-                    aggr = bundle.getManifest().getAggregation(entry.path);
-                } catch (IOException e) {
-                    throw new RuntimeException("Can't get aggregation for " + entry, e);
-                }
-			    aggr.setMediatype(rf.getMediaType());
-			}
-			rootFiles.add(entry);
-		}
-		return rootFiles;
-	}
 
 	public ResourceEntry getResourceEntry(String path) {
 	    Path bundlePath = bundle.getRoot().resolve(path);
@@ -642,35 +414,14 @@ public class UCFPackage implements Cloneable {
 
 	@SuppressWarnings("rawtypes")
 	public void unsetRootFile(String path) {
-		Container container = containerXml.getValue();
-		RootFiles rootFiles = getRootFiles(container);
-		Iterator<Object> anyOrRootIt = rootFiles.getAnyOrRootFile().iterator();
-		while (anyOrRootIt.hasNext()) {
-			Object anyOrRoot = anyOrRootIt.next();
-			if (anyOrRoot instanceof JAXBElement) {
-				anyOrRoot = ((JAXBElement) anyOrRoot).getValue();
-			}
-			if (!(anyOrRoot instanceof RootFile)) {
-				continue;
-			}
-			RootFile rootFileElem = (RootFile) anyOrRoot;
-			if (rootFileElem.getFullPath().equals(path)) {
-				anyOrRootIt.remove();
-			}
-		}
-	}
-
-	protected JAXBElement<Container> getContainerXML() {
-		return containerXml;
+		bundle.removeAsRootFile(bundle.getPath(path));
 	}
 
 	public void save(OutputStream output) throws IOException {
-        prepareContainerXML();
         Path source = bundle.getSource();
         boolean deleteOnClose = bundle.isDeleteOnClose();
         bundle.setDeleteOnClose(false);
-        Bundles.closeBundle(bundle);
-        
+        Bundles.closeBundle(bundle);        
         Files.copy(source, output);
         
         // Re-open the original source (usually a tmpfile)
@@ -691,13 +442,6 @@ public class UCFPackage implements Cloneable {
 
 	@Override
 	public UCFPackage clone() {	    
-	    
-	        try {
-                prepareContainerXML();
-            } catch (IOException e) {
-                throw new RuntimeException("Could not prepare " + CONTAINER_XML, e);
-            }
-	       
 	        Path source = bundle.getSource();       
 	        boolean deleteOnClose = bundle.isDeleteOnClose();       
 	        bundle.setDeleteOnClose(false);
