@@ -4,11 +4,13 @@ import static uk.org.taverna.scufl2.translator.t2flow.T2FlowParser.ravenURI;
 
 import java.net.URI;
 import java.net.URL;
+import java.security.acl.Group;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -18,15 +20,6 @@ import uk.org.taverna.scufl2.api.io.ReaderException;
 import uk.org.taverna.scufl2.translator.t2flow.ParserState;
 import uk.org.taverna.scufl2.translator.t2flow.T2FlowParser;
 import uk.org.taverna.scufl2.translator.t2flow.defaultactivities.AbstractActivityParser;
-import uk.org.taverna.scufl2.xml.t2flow.jaxb.ConfigBean;
-import uk.org.taverna.scufl2.xml.t2flow.jaxb.Entry;
-import uk.org.taverna.scufl2.xml.t2flow.jaxb.ExternalToolConfig;
-import uk.org.taverna.scufl2.xml.t2flow.jaxb.Group;
-import uk.org.taverna.scufl2.xml.t2flow.jaxb.ScriptInputStatic;
-import uk.org.taverna.scufl2.xml.t2flow.jaxb.ScriptInputUser;
-import uk.org.taverna.scufl2.xml.t2flow.jaxb.ScriptOutput;
-import uk.org.taverna.scufl2.xml.t2flow.jaxb.UsecaseConfig;
-import uk.org.taverna.scufl2.xml.t2flow.jaxb.UsecaseDescription;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -162,7 +155,7 @@ public class ExternalToolActivityParser extends AbstractActivityParser {
 //						mechanismXML, PropertyLiteral.XML_LITERAL));
                 
                 // TODO: Extract SSH hostname etc. from mechanismXML
-//				parseMechanismXML(json);
+				parseMechanismXML(json);
 
 				ObjectNode toolDescription = json.objectNode();
 				parseToolDescription(toolDescription,
@@ -180,66 +173,66 @@ public class ExternalToolActivityParser extends AbstractActivityParser {
 		}
 	}
 
-//	private void parseMechanismXML(ObjectNode invocation) {
-//	    type = invocatoin.
-//	    
-//		URI type = invocation.getPropertyAsResourceURI(ACTIVITY_URI.resolve("#mechanismType"));
-//		if (type.equals(ACTIVITY_URI.resolve("#local"))) {
-//			Element xml = invocation.getPropertyAsLiteral(ACTIVITY_URI.resolve("#mechanismXML"))
-//					.getLiteralValueAsElement();
-//
-//			String directory = elementByTag(xml, "directory");
-//			String linkCommand = elementByTag(xml, "linkCommand");
-//			String shellPrefix = elementByTag(xml, "shellPrefix");
-//			PropertyResource node = new PropertyResource();
-//			node.setTypeURI(ACTIVITY_URI.resolve("#LocalNode"));
-//			if (directory != null) {
-//				node.addPropertyAsString(ACTIVITY_URI.resolve("#directory"), directory);
-//			}
-//			if (linkCommand != null) {
-//				node.addPropertyAsString(ACTIVITY_URI.resolve("#linkCommand"), linkCommand);
-//			}
-//			if (shellPrefix != null) {
-//				node.addPropertyAsString(ACTIVITY_URI.resolve("#shellPrefix"), shellPrefix);
-//			}
-//			if (!node.getProperties().isEmpty()) {
-//				// Only add if it is customized
-//				invocation.addProperty(ACTIVITY_URI.resolve("#node"), node);
-//			}
-//
-//			invocation.getProperties().remove(ACTIVITY_URI.resolve("#mechanismXML"));
-//		} else if (type.equals(ACTIVITY_URI.resolve("#ssh"))) {
-//			Element xml = invocation.getPropertyAsLiteral(ACTIVITY_URI.resolve("#mechanismXML"))
-//					.getLiteralValueAsElement();
-//			for (Element sshNode : elementIter(xml.getElementsByTagName("sshNode"))) {
-//				String hostname = elementByTag(sshNode, "host");
-//				String port = elementByTag(sshNode, "port");
-//				String directory = elementByTag(sshNode, "directory");
-//				String linkCommand = elementByTag(sshNode, "linkCommand");
-//				String copyCommand = elementByTag(sshNode, "copyCommand");
-//
-//				PropertyResource node = invocation.addPropertyAsNewResource(
-//						ACTIVITY_URI.resolve("#node"), ACTIVITY_URI.resolve("#SSHNode"));
-//				node.addPropertyAsString(ACTIVITY_URI.resolve("#hostname"), hostname);
-//				if (port != null) {
-//					PropertyLiteral portLit = new PropertyLiteral(port, PropertyLiteral.XSD_INT);
-//					node.addProperty(ACTIVITY_URI.resolve("#port"), portLit);
-//				}
-//				if (directory != null) {
-//					node.addPropertyAsString(ACTIVITY_URI.resolve("#directory"), directory);
-//				}
-//				if (linkCommand != null) {
-//					node.addPropertyAsString(ACTIVITY_URI.resolve("#linkCommand"), linkCommand);
-//				}
-//				if (copyCommand != null) {
-//					node.addPropertyAsString(ACTIVITY_URI.resolve("#copyCommand"), copyCommand);
-//				}
-//			}
-//			invocation.clearProperties(ACTIVITY_URI.resolve("#mechanismXML"));
-//		} else {
-//
-//		}
-//	}
+	private void parseMechanismXML(ObjectNode invocation) {
+	    type = invocation.
+	    
+		URI type = invocation.getPropertyAsResourceURI(ACTIVITY_URI.resolve("#mechanismType"));
+		if (type.equals(ACTIVITY_URI.resolve("#local"))) {
+			Element xml = invocation.getPropertyAsLiteral(ACTIVITY_URI.resolve("#mechanismXML"))
+					.getLiteralValueAsElement();
+
+			String directory = elementByTag(xml, "directory");
+			String linkCommand = elementByTag(xml, "linkCommand");
+			String shellPrefix = elementByTag(xml, "shellPrefix");
+			PropertyResource node = new PropertyResource();
+			node.setTypeURI(ACTIVITY_URI.resolve("#LocalNode"));
+			if (directory != null) {
+				node.addPropertyAsString(ACTIVITY_URI.resolve("#directory"), directory);
+			}
+			if (linkCommand != null) {
+				node.addPropertyAsString(ACTIVITY_URI.resolve("#linkCommand"), linkCommand);
+			}
+			if (shellPrefix != null) {
+				node.addPropertyAsString(ACTIVITY_URI.resolve("#shellPrefix"), shellPrefix);
+			}
+			if (!node.getProperties().isEmpty()) {
+				// Only add if it is customized
+				invocation.addProperty(ACTIVITY_URI.resolve("#node"), node);
+			}
+
+			invocation.getProperties().remove(ACTIVITY_URI.resolve("#mechanismXML"));
+		} else if (type.equals(ACTIVITY_URI.resolve("#ssh"))) {
+			Element xml = invocation.getPropertyAsLiteral(ACTIVITY_URI.resolve("#mechanismXML"))
+					.getLiteralValueAsElement();
+			for (Element sshNode : elementIter(xml.getElementsByTagName("sshNode"))) {
+				String hostname = elementByTag(sshNode, "host");
+				String port = elementByTag(sshNode, "port");
+				String directory = elementByTag(sshNode, "directory");
+				String linkCommand = elementByTag(sshNode, "linkCommand");
+				String copyCommand = elementByTag(sshNode, "copyCommand");
+
+				PropertyResource node = invocation.addPropertyAsNewResource(
+						ACTIVITY_URI.resolve("#node"), ACTIVITY_URI.resolve("#SSHNode"));
+				node.addPropertyAsString(ACTIVITY_URI.resolve("#hostname"), hostname);
+				if (port != null) {
+					PropertyLiteral portLit = new PropertyLiteral(port, PropertyLiteral.XSD_INT);
+					node.addProperty(ACTIVITY_URI.resolve("#port"), portLit);
+				}
+				if (directory != null) {
+					node.addPropertyAsString(ACTIVITY_URI.resolve("#directory"), directory);
+				}
+				if (linkCommand != null) {
+					node.addPropertyAsString(ACTIVITY_URI.resolve("#linkCommand"), linkCommand);
+				}
+				if (copyCommand != null) {
+					node.addPropertyAsString(ACTIVITY_URI.resolve("#copyCommand"), copyCommand);
+				}
+			}
+			invocation.clearProperties(ACTIVITY_URI.resolve("#mechanismXML"));
+		} else {
+
+		}
+	}
 
 	@SuppressWarnings("unused")
 	private Iterable<Element> elementIter(final NodeList nodeList) {
