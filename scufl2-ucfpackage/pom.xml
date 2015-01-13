@@ -12,8 +12,8 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>commons-io</groupId>
-			<artifactId>commons-io</artifactId>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>com.springsource.org.apache.commons.io</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
